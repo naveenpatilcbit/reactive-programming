@@ -20,7 +20,7 @@ import reactor.core.scheduler.Schedulers;
 
 public class FileOperationsController {
 
-	private static final int CHUNK_SIZE = 100;
+	private static final int CHUNK_SIZE = 1024;
 
 	@GetMapping(value = "/generate_file", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
 	public Mono<String> genearateFile() {
@@ -42,6 +42,7 @@ public class FileOperationsController {
 		return Mono.just("success");
 	}
 
+	@GetMapping(value = "/generate_file", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
 	public Mono<String> copyFiles() {
 
 		String inputPath = "input.txt";
@@ -77,6 +78,28 @@ public class FileOperationsController {
 			e.printStackTrace();
 		}
 		return Mono.just("success");
+	}
+
+	@GetMapping(value = "/read_upload", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+	public Mono<String> readAndPost() {
+
+		String inputPath = "input.txt";
+
+		WebClient webClient = WebClient.builder().baseUrl("https://jsonplaceholder.typicode.com") // Sample public API
+				.build();
+
+		try {
+			Flux.fromStream(Files.lines(Path.of(inputPath))).subscribeOn(Schedulers.boundedElastic())
+					.subscribe(line -> webClient.post().uri("/posts").bodyValue(line)          // send the JSON as the request body
+		                    .retrieve()
+		                    .bodyToMono(String.class)); // expecting a String response; adjust if needed);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		return Mono.just("success");
+
 	}
 
 }
